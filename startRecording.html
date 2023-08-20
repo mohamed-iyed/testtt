@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Document</title>
+    <style>
+      html {
+        overflow: hidden;
+        width: 100%;
+        height: 100%;
+      }
+      body {
+        min-width: 100%;
+        min-height: 100%;
+        margin: 0;
+      }
+    </style>
+  </head>
+  <body>
+    <script>
+      const div = document.createElement("div");
+      let offsetX, offsetY;
+      let dragging = false;
+
+      div.style.cssText = `
+        width: 100px;
+        height: 100px;
+        border: 2px solid red;
+        resize: both;
+        overflow: hidden;
+        cursor: all-scroll;
+        position: absolute;
+        left: 100px;
+        top: 100px;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        `;
+      document.body.append(div);
+
+      const done = document.createElement("button");
+      done.textContent = "done";
+      div.append(done);
+
+      done.addEventListener("click", () => {
+        const { x, y, width, height } = div.getBoundingClientRect();
+
+        window.electronAPI.recordingArea({
+          x,
+          y,
+          width,
+          height,
+        });
+      });
+
+      const move = (e) => {
+        div.style.left = `${e.clientX - offsetX}px`;
+        div.style.top = `${e.clientY - offsetY}px`;
+      };
+
+      div.addEventListener("mousedown", (e) => {
+        if (e.shiftKey) {
+          dragging = true;
+        }
+      });
+
+      div.addEventListener("mousemove", (e) => {
+        if (!dragging || !e.shiftKey) return;
+
+        offsetX = e.clientX - div.offsetLeft;
+        offsetY = e.clientY - div.offsetTop;
+
+        document.addEventListener("mousemove", move);
+      });
+
+      document.addEventListener("mouseup", () => {
+        document.removeEventListener("mousemove", move);
+      });
+
+      div.addEventListener("mouseup", () => {
+        dragging = false;
+      });
+      // const canvas = document.createElement('canvas');
+      // const ctx = canvas.getContext('2d');
+      // canvas.style.cssText = `
+      //   width: 100%;
+      //   height: 100%;
+      // `;
+      // document.body.append(canvas);
+      // let start = null;
+      // const canvasx = canvas.offsetLeft;
+      // const canvasy = canvas.offsetTop;
+      // let last_mousex = 0;
+      // let mousex = 0;
+      // let mousey = 0;
+      // let mousedown = false;
+
+      // canvas.addEventListener("mousedown", (e) => {
+      //   last_mousex = e.clientX - canvasx;
+      //   last_mousey = e.clientY - canvasy;
+      //   mousedown = true;
+
+      //   console.log("down");
+      // });
+
+      // canvas.addEventListener("mouseup", (e) => {
+      //   mousedown = false;
+
+      //   console.log("up");
+      // });
+
+      // canvas.addEventListener("mousemove", (e) => {
+      //   mousex = e.clientX - canvasx;
+      //   mousey = e.clientY - canvasy;
+      //   if (mousedown) {
+      //     console.log("move");
+      //     ctx.clearRect(0, 0, canvas.width, canvas.height); //clear canvas
+      //     ctx.beginPath();
+      //     const width = mousex - last_mousex;
+      //     const height = mousey - last_mousey;
+      //     console.log({ last_mousex, last_mousey, mousex, mousey });
+      //     ctx.rect(last_mousex, last_mousey, width, height);
+      //     ctx.strokeStyle = "white";
+      //     ctx.lineWidth = 1;
+      //     ctx.stroke();
+      //   }
+      // });
+
+      // console.log("selecting ...");
+      // document.body.addEventListener("click", (event) => {
+      //   console.log("click");
+      //   if (start == null) {
+      //     start = { x0: event.clientX, y0: event.clientY };
+      //   } else {
+      //     window.electronAPI.recordingArea({
+      //       ...start,
+      //       x1: event.clientX,
+      //       y1: event.clientY,
+      //     });
+      //   }
+      // });
+    </script>
+  </body>
+</html>
