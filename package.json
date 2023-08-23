@@ -11,7 +11,8 @@
   "license": "ISC",
   "dependencies": {
     "canvas": "^2.11.2",
-    "electron": "^26.0.0"
+    "electron": "^26.0.0",
+    "wrtc": "^0.4.7"
   },
   "devDependencies": {
     "electron-rebuild": "^3.2.9"

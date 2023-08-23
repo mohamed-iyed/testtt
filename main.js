@@ -2,12 +2,9 @@ const { app, BrowserWindow, ipcMain, desktopCapturer } = require('electron')
 const child_process = require('child_process');
 const { readFile, writeFile } = require('fs/promises')
 const path = require('path')
-// const sharp = require('sharp')
-const { createCanvas, Image } = require('canvas')
-
+const { RTCPeerConnection, RTCSessionDescription, RTCIceCandidate, MediaStream } = require('wrtc')
 
 // mohamediyedta@gmail.com
-
 // 123456789Loyds..
 
 let mainWindow = null
@@ -15,8 +12,14 @@ let isRecording = false
 let recordingArea = null
 let isSharing = false;
 let ffmpeg;
-let ctx;
-let canvas;
+let pc = new RTCPeerConnection({
+    iceServers: [
+        {
+            urls: ['stun:stun1.l.google.com:19302', 'stun:stun2.l.google.com:19302'],
+        }
+    ]
+});
+const stream = new MediaStream();
 
 const createWindow = async () => {
     mainWindow = new BrowserWindow({
@@ -81,13 +84,6 @@ const hsr = async () => {
                     const data = thumbnail.crop({ x, y, width: selectedWith, height: selectedHeight }).toJPEG(50).toString('base64');
 
                     mainWindow.webContents.send('NEW_FRAME', `data:image/jpeg;base64, ${data}`);
-
-                    if (isSharing && ctx) {
-                        const image = new Image()
-                        image.src = `data:image/jpeg;base64, ${data}`;
-
-                        image.onload = () => ctx.drawImage(image, 0, 0)
-                    }
                 }
             } catch (e) {
                 console.log({ e })
@@ -106,83 +102,98 @@ const htr = () => {
 
 
 
-function ssy(_, link) {
-    const { width: selectedWith, height: selectedHeight } = recordingArea;
-    canvas = createCanvas(selectedWith, selectedHeight)
-    canvas.toB
-    ctx = canvas.getContext('2d')
+async function ssy(_, link) {
     console.log('start streaming...', { link })
     isSharing = true;
 
-    ffmpeg = child_process.spawn('ffmpeg', [
-        // '-f', 'lavfi', '-i', 'anullsrc',
+    // ffmpeg = child_process.spawn('./ffmpeg-6.0-full_build/bin/ffmpeg', [
+    //     // '-f', 'lavfi', '-i', 'anullsrc',
 
-        // FFmpeg will read input video from STDIN
-        // '-i', '-',
+    //     // FFmpeg will read input video from STDIN
+    //     // '-i', '-',
 
-        // // Because we're using a generated audio source which never ends,
-        // // specify that we'll stop at end of other input.  Remove this line if you
-        // // send audio from the browser.
-        // // '-shortest',
+    //     // // Because we're using a generated audio source which never ends,
+    //     // // specify that we'll stop at end of other input.  Remove this line if you
+    //     // // send audio from the browser.
+    //     // // '-shortest',
 
-        // // If we're encoding H.264 in-browser, we can set the video codec to 'copy'
-        // // so that we don't waste any CPU and quality with unnecessary transcoding.
-        // // If the browser doesn't support H.264, set the video codec to 'libx264'
-        // // or similar to transcode it to H.264 here on the server.
-        // // '-vcodec', 'copy',
+    //     // // If we're encoding H.264 in-browser, we can set the video codec to 'copy'
+    //     // // so that we don't waste any CPU and quality with unnecessary transcoding.
+    //     // // If the browser doesn't support H.264, set the video codec to 'libx264'
+    //     // // or similar to transcode it to H.264 here on the server.
+    //     // // '-vcodec', 'copy',
 
-        // // AAC audio is required for Facebook Live.  No browser currently supports
-        // // encoding AAC, so we must transcode the audio to AAC here on the server.
-        // '-acodec', 'aac',
+    //     // // AAC audio is required for Facebook Live.  No browser currently supports
+    //     // // encoding AAC, so we must transcode the audio to AAC here on the server.
+    //     // '-acodec', 'aac',
 
-        // // FLV is the container format used in conjunction with RTMP
-        // '-vcodec', 'mjpeg',
-        // '-f', 'flv',
-        // '-f', 'png',
-        '-i', '-',
-        '-c:v', 'libvpx-vp9',
-        '-pix_fmt', 'yuva420p',
-        // '-c:v', 'png',
-        '-preset', 'ultrafast',
-        // '-tune', 'zerolatency',
-        '-crf', '23',
-        '-b:v', '2000k',
-        '-maxrate', '2500k',
-        '-bufsize', '4000k',
-        '-g', '30',
-        // '-f', 'flv',
-        // '-c:v', 'mjpeg',
-        'test1.webm'
-    ]);
+    //     // // FLV is the container format used in conjunction with RTMP
+    //     // '-vcodec', 'mjpeg',
+    //     // '-f', 'flv',
+    //     // '-f', 'png',
+    //     '-i', '-',
+    //     '-f', 'lavfi',
+    //     // '-c:v', 'libvpx-vp9',
+    //     '-vcodec', 'libx264',
+    //     '-pix_fmt', 'yuva420p',
+    //     // '-c:v', 'png',
+    //     '-preset', 'ultrafast',
+    //     // '-tune', 'zerolatency',
+    //     '-crf', '23',
+    //     '-b:v', '2000k',
+    //     '-maxrate', '2500k',
+    //     '-bufsize', '4000k',
+    //     '-g', '30',
+    //     '-f', 'flv',
+    //     // '-c:v', 'mjpeg',
+    //     'test1.webm'
+    // ]);
 
-    // rtmp://a.rtmp.youtube.com/live2/zamp-bwsu-f8t6-k9vf-b0bg
+    // // rtmp://a.rtmp.youtube.com/live2/zamp-bwsu-f8t6-k9vf-b0bg
 
-    ffmpeg.on('close', (code, signal) => {
-        console.log('FFmpeg child process closed, code ' + code + ', signal ' + signal);
-    });
+    // ffmpeg.on('close', (code, signal) => {
+    //     console.log('FFmpeg child process closed, code ' + code + ', signal ' + signal);
+    // });
 
-    // Handle STDIN pipe errors by logging to the console.
-    // These errors most commonly occur when FFmpeg closes and there is still
-    // data to write.  If left unhandled, the server will crash.
-    ffmpeg.stdin.on('error', (e) => {
-        console.log('FFmpeg STDIN Error', e);
-    });
+    // // Handle STDIN pipe errors by logging to the console.
+    // // These errors most commonly occur when FFmpeg closes and there is still
+    // // data to write.  If left unhandled, the server will crash.
+    // ffmpeg.stdin.on('error', (e) => {
+    //     console.log('FFmpeg STDIN Error', e);
+    // });
 
-    // FFmpeg outputs all of its messages to STDERR.  Let's log them to the console.
-    ffmpeg.stderr.on('data', (data) => {
-        console.log('FFmpeg STDERR:', data.toString());
-    });
+    // // FFmpeg outputs all of its messages to STDERR.  Let's log them to the console.
+    // ffmpeg.stderr.on('data', (data) => {
+    //     console.log('FFmpeg STDERR:', data.toString());
+    // });
 
 
-    const send = () => {
-        if (canvas && ffmpeg && isSharing) {
-            ffmpeg.stdin.write(canvas.toBuffer('image/png', { 'quality': .5 }));
-        }
-
-        setTimeout(() => send(), 50)
+    pc.ontrack = event => {
+        console.log('tacks canme', event.track);
+        event.streams[0].getTracks().forEach(track => stream.addTrack(track));
     }
 
-    send();
+
+    pc.onicecandidate = event => {
+        console.log(event.candidate)
+        if (event.candidate == null) return;
+
+        mainWindow.webContents.send('ICE_CANDIDATE', event.candidate.toJSON());
+    }
+
+
+    // const rrtcof = new RTCSessionDescription(rtcof);
+    // pc.setRemoteDescription(rrtcof);
+
+    // pc.onicecandidate = event => {
+    //     event.candidate && 
+    // }
+
+    // const send = () => {
+    //     setTimeout(() => send(), 50)
+    // }
+
+    // send();
 }
 
 
@@ -195,10 +206,29 @@ function ssy(_, link) {
 // }
 
 
+async function ds(_, description) {
+    await pc.setRemoteDescription(new RTCSessionDescription(description)).catch(console.log);
+
+    const an = await pc.createAnswer().catch(console.log);
+    await pc.setLocalDescription(an).catch(console.log);
+
+
+    mainWindow.webContents.send('DESCRIPTION', { sdp: pc.localDescription.sdp, type: pc.localDescription.type });
+}
+
+
+async function ic(_, iceCandidate) {
+    console.log({ iceCandidate })
+    await pc.addIceCandidate(new RTCIceCandidate(iceCandidate))
+}
+
+
 app.whenReady().then(() => {
     ipcMain.handle('START_RECORDING', hsr)
     ipcMain.handle('STOP_RECORDING', htr)
     ipcMain.handle('START_SHARE', ssy)
+    ipcMain.handle('DESCRIPTION', ds)
+    ipcMain.handle('ICE_CANDIDATE', ic)
     // ipcMain.handle('MEDIA_DATA', st)
 
     createWindow()
